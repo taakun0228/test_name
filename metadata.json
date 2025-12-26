@@ -1,0 +1,8 @@
+
+{
+  "name": "SparkBoard - Simple Anonymous BBS",
+  "description": "A lightweight, anonymous bulletin board allowing users to post text and images with real-time updates and AI-powered summarization.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

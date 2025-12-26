@@ -1,0 +1,157 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SparkBoard - 匿名掲示板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-slate-50 text-slate-900 font-['Inter','Noto_Sans_JP',sans-serif]">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div class="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 p-2 rounded-lg text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" strokeLinejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tight">SparkBoard</h1>
+            </div>
+            <div id="post-count" class="text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1 rounded-full uppercase tracking-wider">0 Posts</div>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4 py-8">
+        <!-- AI Summary Banner -->
+        <section id="ai-summary-section" class="hidden mb-8 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200/50">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-100" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                    <h3 class="font-bold text-lg">AI 掲示板要約</h3>
+                </div>
+                <button id="refresh-summary-btn" class="hover:bg-white/10 p-1.5 rounded-full transition-colors">
+                    <svg id="summary-refresh-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+            </div>
+            <p id="ai-summary-text" class="text-indigo-100 text-sm leading-relaxed min-h-[3rem]">要約を取得中...</p>
+        </section>
+
+        <!-- Post Form -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8 transition-all hover:shadow-md">
+            <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                新しい投稿
+            </h2>
+
+            <form id="post-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">ニックネーム</label>
+                    <input type="text" id="nickname" placeholder="匿名" maxlength="20" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">本文 <span class="text-red-500">*</span></label>
+                    <textarea id="content" required placeholder="メッセージを入力してください..." rows="4" maxlength="1000" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">画像（任意 / 5MBまで）</label>
+                    <div class="flex items-center gap-4">
+                        <label class="cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-4 py-2 rounded-lg border border-indigo-200 transition-colors flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>画像を選択</span>
+                            <input type="file" id="image-input" accept="image/*" class="hidden">
+                        </label>
+                        <div id="preview-container" class="hidden relative">
+                            <img id="image-preview" src="" alt="Preview" class="h-10 w-10 object-cover rounded-md border border-slate-200">
+                            <button type="button" id="remove-image-btn" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="form-error" class="hidden bg-red-50 border-l-4 border-red-500 p-3 flex items-start gap-2 text-red-700 text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span id="error-message-text"></span>
+                </div>
+
+                <button type="submit" id="submit-btn" class="w-full py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                    投稿する
+                </button>
+            </form>
+        </section>
+
+        <!-- Posts List -->
+        <section>
+            <div class="flex items-center gap-2 mb-4">
+                <h2 class="text-lg font-bold text-slate-700">最近の投稿</h2>
+                <div class="h-[2px] flex-1 bg-slate-200 rounded-full"></div>
+            </div>
+            <div id="posts-container" class="space-y-4">
+                <!-- Posts will be injected here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Firebase Instructions Footer -->
+    <footer class="max-w-3xl mx-auto px-4 mt-8 pb-12 border-t border-slate-200 pt-8">
+        <div class="bg-slate-100 rounded-xl p-5 text-sm text-slate-600 space-y-3">
+            <h4 class="font-bold text-slate-800">🚀 Firebase設定手順 (初心者向け)</h4>
+            <ol class="list-decimal ml-5 space-y-1">
+                <li><a href="https://console.firebase.google.com/" target="_blank" class="text-indigo-600 underline">Firebase Console</a>でプロジェクトを作成。</li>
+                <li><strong>Firestore Database</strong> を有効化し、ルールを「公開」に設定。</li>
+                <li><strong>Storage</strong> を有効化し、同じくルールを設定。</li>
+                <li>プロジェクト設定 ＞ 「アプリを追加 (Web)」からSDK設定を取得。</li>
+                <li><code>main.js</code> の冒頭でSDKを初期化し、LocalStorageの処理をFirestoreへ書き換え。</li>
+            </ol>
+            <p class="text-xs text-slate-400 mt-4 italic">※ このデモはLocalStorageで動作しており、データはあなたのブラウザのみに保存されます。</p>
+        </div>
+    </footer>
+
+    <!-- Image Modal -->
+    <div id="image-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm transition-opacity duration-300">
+        <button id="close-modal" class="absolute top-6 right-6 text-white hover:text-slate-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <img id="modal-img" src="" alt="Expanded View" class="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-300 scale-95">
+    </div>
+
+    <script src="index.tsx" type="module"></script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
